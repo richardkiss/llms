@@ -24,6 +24,13 @@ from llms.main import (
 class TestXDGHelpers(unittest.TestCase):
     """Test XDG helper functions."""
 
+    @patch.dict(os.environ, {}, clear=True)
+    def test_get_xdg_config_home_no_home(self):
+        """Test XDG_CONFIG_HOME works even without HOME env var"""
+        result = get_xdg_config_home()
+        # Should use os.path.expanduser("~") which works without HOME
+        self.assertTrue(result.endswith("/.config"))
+
     @patch.dict(os.environ, {"HOME": "/home/testuser"}, clear=True)
     def test_get_xdg_config_home_default(self):
         """Test XDG_CONFIG_HOME defaults to ~/.config"""

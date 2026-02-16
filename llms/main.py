@@ -2318,17 +2318,26 @@ def print_status():
 
 def get_xdg_config_home():
     """Get XDG_CONFIG_HOME directory, defaulting to ~/.config"""
-    return os.getenv("XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config"))
+    xdg_config = os.getenv("XDG_CONFIG_HOME")
+    if xdg_config:
+        return xdg_config
+    return os.path.join(os.path.expanduser("~"), ".config")
 
 
 def get_xdg_data_home():
     """Get XDG_DATA_HOME directory, defaulting to ~/.local/share"""
-    return os.getenv("XDG_DATA_HOME", os.path.join(os.getenv("HOME"), ".local", "share"))
+    xdg_data = os.getenv("XDG_DATA_HOME")
+    if xdg_data:
+        return xdg_data
+    return os.path.join(os.path.expanduser("~"), ".local", "share")
 
 
 def get_xdg_cache_home():
     """Get XDG_CACHE_HOME directory, defaulting to ~/.cache"""
-    return os.getenv("XDG_CACHE_HOME", os.path.join(os.getenv("HOME"), ".cache"))
+    xdg_cache = os.getenv("XDG_CACHE_HOME")
+    if xdg_cache:
+        return xdg_cache
+    return os.path.join(os.path.expanduser("~"), ".cache")
 
 
 def home_llms_path(filename):
@@ -2433,7 +2442,7 @@ def migrate_to_xdg():
     if os.getenv("LLMS_HOME"):
         return
     
-    old_home = os.path.join(os.getenv("HOME"), ".llms")
+    old_home = os.path.join(os.path.expanduser("~"), ".llms")
     
     # Only migrate if old directory exists
     if not os.path.exists(old_home):
