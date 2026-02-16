@@ -2316,15 +2316,91 @@ def print_status():
         print("Disabled: None")
 
 
+def get_xdg_config_home():
+    """Get XDG_CONFIG_HOME directory, defaulting to ~/.config"""
+    return os.getenv("XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config"))
+
+
+def get_xdg_data_home():
+    """Get XDG_DATA_HOME directory, defaulting to ~/.local/share"""
+    return os.getenv("XDG_DATA_HOME", os.path.join(os.getenv("HOME"), ".local", "share"))
+
+
+def get_xdg_cache_home():
+    """Get XDG_CACHE_HOME directory, defaulting to ~/.cache"""
+    return os.getenv("XDG_CACHE_HOME", os.path.join(os.getenv("HOME"), ".cache"))
+
+
 def home_llms_path(filename):
-    home_dir = os.getenv("LLMS_HOME", os.path.join(os.getenv("HOME"), ".llms"))
+    """
+    Get path for config files using XDG Base Directory specification.
+    Priority: LLMS_HOME > LLMS_CONFIG_HOME > XDG_CONFIG_HOME > ~/.config/llms
+    
+    For backward compatibility, LLMS_HOME overrides all XDG paths.
+    """
+    # LLMS_HOME is legacy and overrides everything
+    if os.getenv("LLMS_HOME"):
+        home_dir = os.getenv("LLMS_HOME")
+    # LLMS_CONFIG_HOME for explicit config override
+    elif os.getenv("LLMS_CONFIG_HOME"):
+        home_dir = os.getenv("LLMS_CONFIG_HOME")
+    # XDG_CONFIG_HOME for XDG-compliant config
+    else:
+        home_dir = os.path.join(get_xdg_config_home(), "llms")
+    
     relative_path = os.path.join(home_dir, filename)
     # return resolved full absolute path
     return os.path.abspath(os.path.normpath(relative_path))
 
 
+def get_data_path(relative_path=""):
+    """
+    Get path for user data using XDG Base Directory specification.
+    Priority: LLMS_HOME > LLMS_DATA_HOME > XDG_DATA_HOME > ~/.local/share/llms
+    
+    For backward compatibility, LLMS_HOME overrides all XDG paths.
+    """
+    # LLMS_HOME is legacy and overrides everything (backward compatibility)
+    if os.getenv("LLMS_HOME"):
+        data_dir = os.getenv("LLMS_HOME")
+    # LLMS_DATA_HOME for explicit data override
+    elif os.getenv("LLMS_DATA_HOME"):
+        data_dir = os.getenv("LLMS_DATA_HOME")
+    # XDG_DATA_HOME for XDG-compliant data
+    else:
+        data_dir = os.path.join(get_xdg_data_home(), "llms")
+    
+    if relative_path:
+        full_path = os.path.join(data_dir, relative_path)
+    else:
+        full_path = data_dir
+    
+    return os.path.abspath(os.path.normpath(full_path))
+
+
 def get_cache_path(path=""):
-    return home_llms_path(f"cache/{path}") if path else home_llms_path("cache")
+    """
+    Get path for cache using XDG Base Directory specification.
+    Priority: LLMS_HOME > LLMS_CACHE_HOME > XDG_CACHE_HOME > ~/.cache/llms
+    
+    For backward compatibility, LLMS_HOME overrides all XDG paths.
+    """
+    # LLMS_HOME is legacy and overrides everything (backward compatibility)
+    if os.getenv("LLMS_HOME"):
+        cache_dir = os.path.join(os.getenv("LLMS_HOME"), "cache")
+    # LLMS_CACHE_HOME for explicit cache override
+    elif os.getenv("LLMS_CACHE_HOME"):
+        cache_dir = os.getenv("LLMS_CACHE_HOME")
+    # XDG_CACHE_HOME for XDG-compliant cache
+    else:
+        cache_dir = os.path.join(get_xdg_cache_home(), "llms")
+    
+    if path:
+        full_path = os.path.join(cache_dir, path)
+    else:
+        full_path = cache_dir
+    
+    return os.path.abspath(os.path.normpath(full_path))
 
 
 def get_config_path():
@@ -2341,6 +2417,77 @@ def get_config_path():
         if os.path.exists(g_config_path):
             return g_config_path
     return None
+
+
+def migrate_to_xdg():
+    """
+    Migrate data from old ~/.llms/ to XDG-compliant directories.
+    This function is called on startup to ensure backward compatibility.
+    
+    Migration paths:
+    - Config: ~/.llms/ -> ~/.config/llms/
+    - Data: ~/.llms/user/ -> ~/.local/share/llms/user/
+    - Cache: ~/.llms/cache/ -> ~/.cache/llms/
+    """
+    # Don't migrate if LLMS_HOME is set (user wants custom location)
+    if os.getenv("LLMS_HOME"):
+        return
+    
+    old_home = os.path.join(os.getenv("HOME"), ".llms")
+    
+    # Only migrate if old directory exists
+    if not os.path.exists(old_home):
+        return
+    
+    migrated_any = False
+    
+    # Migrate config files (llms.json, providers.json, extensions/)
+    new_config_dir = home_llms_path("")
+    config_files = ["llms.json", "providers.json"]
+    
+    for config_file in config_files:
+        old_file = os.path.join(old_home, config_file)
+        new_file = os.path.join(new_config_dir, config_file)
+        
+        if os.path.exists(old_file) and not os.path.exists(new_file):
+            os.makedirs(new_config_dir, exist_ok=True)
+            shutil.copy2(old_file, new_file)
+            _log(f"Migrated config: {old_file} -> {new_file}")
+            migrated_any = True
+    
+    # Migrate extensions directory
+    old_ext = os.path.join(old_home, "extensions")
+    new_ext = os.path.join(new_config_dir, "extensions")
+    
+    if os.path.exists(old_ext) and not os.path.exists(new_ext):
+        os.makedirs(new_config_dir, exist_ok=True)
+        shutil.copytree(old_ext, new_ext)
+        _log(f"Migrated extensions: {old_ext} -> {new_ext}")
+        migrated_any = True
+    
+    # Migrate user data
+    old_user = os.path.join(old_home, "user")
+    new_user = os.path.join(get_data_path(), "user")
+    
+    if os.path.exists(old_user) and not os.path.exists(new_user):
+        os.makedirs(os.path.dirname(new_user), exist_ok=True)
+        shutil.copytree(old_user, new_user)
+        _log(f"Migrated user data: {old_user} -> {new_user}")
+        migrated_any = True
+    
+    # Migrate cache
+    old_cache = os.path.join(old_home, "cache")
+    new_cache = get_cache_path()
+    
+    if os.path.exists(old_cache) and not os.path.exists(new_cache):
+        os.makedirs(os.path.dirname(new_cache), exist_ok=True)
+        shutil.copytree(old_cache, new_cache)
+        _log(f"Migrated cache: {old_cache} -> {new_cache}")
+        migrated_any = True
+    
+    if migrated_any:
+        _log(f"Migration complete. Old directory still exists at {old_home}")
+        _log(f"You can remove it manually: rm -rf {old_home}")
 
 
 def enable_provider(provider):
@@ -3017,9 +3164,10 @@ class AppExtensions:
         return False, None
 
     def get_user_path(self, user: Optional[str] = None) -> str:
+        """Get user-specific data path using XDG data directory."""
         if user:
-            return home_llms_path(os.path.join("user", user))
-        return home_llms_path(os.path.join("user", "default"))
+            return get_data_path(os.path.join("user", user))
+        return get_data_path(os.path.join("user", "default"))
 
     def get_providers(self) -> Dict[str, Any]:
         return g_handlers
@@ -3493,7 +3641,10 @@ class ExtensionContext:
 
 
 def get_extensions_path():
-    return os.getenv("LLMS_EXTENSIONS_DIR", home_llms_path("extensions"))
+    """Get path for custom extensions using XDG config directory."""
+    if os.getenv("LLMS_EXTENSIONS_DIR"):
+        return os.getenv("LLMS_EXTENSIONS_DIR")
+    return home_llms_path("extensions")
 
 
 def get_disabled_extensions():
@@ -4036,6 +4187,9 @@ def cli_exec(cli_args, extra_args):
     # established in load_extensions() remain active during cli_chat()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    # Migrate old ~/.llms/ to XDG-compliant directories
+    migrate_to_xdg()
 
     loop.run_until_complete(reload_providers())
     loop.run_until_complete(load_extensions())
