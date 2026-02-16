@@ -2450,44 +2450,56 @@ def migrate_to_xdg():
         new_file = os.path.join(new_config_dir, config_file)
         
         if os.path.exists(old_file) and not os.path.exists(new_file):
-            os.makedirs(new_config_dir, exist_ok=True)
-            shutil.copy2(old_file, new_file)
-            _log(f"Migrated config: {old_file} -> {new_file}")
-            migrated_any = True
+            try:
+                os.makedirs(new_config_dir, exist_ok=True)
+                shutil.copy2(old_file, new_file)
+                print(f"Migrated config: {old_file} -> {new_file}")
+                migrated_any = True
+            except Exception as e:
+                print(f"Warning: Failed to migrate {old_file}: {e}")
     
     # Migrate extensions directory
     old_ext = os.path.join(old_home, "extensions")
     new_ext = os.path.join(new_config_dir, "extensions")
     
     if os.path.exists(old_ext) and not os.path.exists(new_ext):
-        os.makedirs(new_config_dir, exist_ok=True)
-        shutil.copytree(old_ext, new_ext)
-        _log(f"Migrated extensions: {old_ext} -> {new_ext}")
-        migrated_any = True
+        try:
+            os.makedirs(new_config_dir, exist_ok=True)
+            shutil.copytree(old_ext, new_ext)
+            print(f"Migrated extensions: {old_ext} -> {new_ext}")
+            migrated_any = True
+        except Exception as e:
+            print(f"Warning: Failed to migrate extensions: {e}")
     
     # Migrate user data
     old_user = os.path.join(old_home, "user")
     new_user = os.path.join(get_data_path(), "user")
     
     if os.path.exists(old_user) and not os.path.exists(new_user):
-        os.makedirs(os.path.dirname(new_user), exist_ok=True)
-        shutil.copytree(old_user, new_user)
-        _log(f"Migrated user data: {old_user} -> {new_user}")
-        migrated_any = True
+        try:
+            os.makedirs(os.path.dirname(new_user), exist_ok=True)
+            shutil.copytree(old_user, new_user)
+            print(f"Migrated user data: {old_user} -> {new_user}")
+            migrated_any = True
+        except Exception as e:
+            print(f"Warning: Failed to migrate user data: {e}")
     
     # Migrate cache
     old_cache = os.path.join(old_home, "cache")
     new_cache = get_cache_path()
     
     if os.path.exists(old_cache) and not os.path.exists(new_cache):
-        os.makedirs(os.path.dirname(new_cache), exist_ok=True)
-        shutil.copytree(old_cache, new_cache)
-        _log(f"Migrated cache: {old_cache} -> {new_cache}")
-        migrated_any = True
+        try:
+            os.makedirs(os.path.dirname(new_cache), exist_ok=True)
+            shutil.copytree(old_cache, new_cache)
+            print(f"Migrated cache: {old_cache} -> {new_cache}")
+            migrated_any = True
+        except Exception as e:
+            print(f"Warning: Failed to migrate cache: {e}")
     
     if migrated_any:
-        _log(f"Migration complete. Old directory still exists at {old_home}")
-        _log(f"You can remove it manually: rm -rf {old_home}")
+        print(f"Migration complete. Old directory still exists at {old_home}")
+        print(f"You can remove it manually: rm -rf {old_home}")
 
 
 def enable_provider(provider):
