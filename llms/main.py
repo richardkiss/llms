@@ -2509,6 +2509,21 @@ def migrate_to_xdg():
     if migrated_any:
         print(f"Migration complete. Old directory still exists at {old_home}")
         print(f"You can remove it manually: rm -rf {old_home}")
+        
+        # Create a warning file in the old directory
+        warning_file = os.path.join(old_home, "MIGRATED")
+        try:
+            with open(warning_file, "w") as f:
+                f.write("This directory is obsolete and has been migrated to XDG-compliant locations.\n\n")
+                f.write("New locations:\n")
+                f.write(f"  - Config:     {home_llms_path('')}\n")
+                f.write(f"  - User data:  {get_data_path('')}\n")
+                f.write(f"  - Cache:      {get_cache_path('')}\n\n")
+                f.write("This directory can be safely deleted:\n")
+                f.write(f"  rm -rf {old_home}\n\n")
+                f.write("For more information, see: https://specifications.freedesktop.org/basedir-spec/\n")
+        except Exception as e:
+            print(f"Warning: Failed to create migration notice file: {e}")
 
 
 def enable_provider(provider):
