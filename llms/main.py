@@ -2510,8 +2510,8 @@ def migrate_to_xdg():
         print(f"Migration complete. Old directory still exists at {old_home}")
         print(f"You can remove it manually: rm -rf {old_home}")
         
-        # Create a warning file in the old directory
-        warning_file = os.path.join(old_home, "MIGRATED")
+        # Create a warning file in the old directory with a very clear name
+        warning_file = os.path.join(old_home, "README__THIS_DIRECTORY_IS_OBSOLETE")
         try:
             with open(warning_file, "w") as f:
                 f.write("This directory is obsolete and has been migrated to XDG-compliant locations.\n\n")
