@@ -49,14 +49,14 @@ from urllib.parse import parse_qs, urljoin
 import aiohttp
 from aiohttp import web
 
-from .xdg_migration import (
+from .xdg_migration import migrate_to_xdg
+from .xdg_paths import (
     get_cache_path,
     get_data_path,
     get_xdg_cache_home,
     get_xdg_config_home,
     get_xdg_data_home,
     home_llms_path,
-    migrate_to_xdg,
 )
 
 try:
